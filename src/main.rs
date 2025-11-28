@@ -1,6 +1,6 @@
 use std::{
     fmt::{Display, Formatter},
-    num::NonZeroU8,
+    num::{NonZero, NonZeroU8},
 };
 
 type Onum = Option<NonZeroU8>;
@@ -42,24 +42,19 @@ impl Board {
         true
     }
 
-    fn check_column(&self, column: usize) -> bool {
-        let cols: Box<[_]> = (0..9).map(|row| self.0[row][column]).collect();
-        unique(&cols)
+    fn column(&self, column: usize) -> Box<[Option<NonZero<u8>>]> {
+        (0..9).map(|row| self.0[row][column]).collect()
     }
     fn check_columns(&self) -> bool {
-        (0..9).all(|i| self.check_column(i))
-    }
-
-    fn check_row(&self, row: usize) -> bool {
-        unique(&self.0[row])
+        (0..9).all(|col| unique(&self.column(col)))
     }
     fn check_rows(&self) -> bool {
-        (0..9).all(|i| self.check_row(i))
+        (0..9).all(|i| unique(&self.0[i]))
     }
     fn check(&self) -> bool {
         self.check_rows() && self.check_columns() && self.check_boxes()
     }
-    fn next_pos(&self) -> Option<usize> {
+    fn next_cell(&self) -> Option<usize> {
         self.0
             .iter()
             .flatten()
@@ -70,7 +65,7 @@ impl Board {
             })
             .next()
     }
-    fn set_pos(&mut self, pos: usize, n: Onum) {
+    fn set_cell(&mut self, pos: usize, n: Onum) {
         let row = pos / 9;
         let col = pos % 9;
         self.0[row][col] = n;
@@ -80,11 +75,11 @@ impl Board {
         if !self.check() {
             return None;
         }
-        let Some(pos) = self.next_pos() else {
+        let Some(next_cell) = self.next_cell() else {
             return Some(self);
         };
-        for n in (1..=9).map(|i| NonZeroU8::new(i)) {
-            self.set_pos(pos, n);
+        for number in (1..=9).map(|i| NonZeroU8::new(i)) {
+            self.set_cell(next_cell, number);
             if let Some(solution) = self.solve() {
                 return Some(solution);
             }
@@ -118,7 +113,6 @@ fn main() {
     match solution {
         Some(s) => {
             println!("{s}");
-            println!("{:?}", s.square(0, 0));
         }
         None => panic!("no solution"),
     }
